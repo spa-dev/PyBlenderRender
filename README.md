@@ -3,9 +3,9 @@
 
 ## **Features**
 
-- Modular configuration for camera, lighting, and rendering\
-- Multiple camera path generation techniques (Spiral, Pole Rotation, Cube, etc.)\
-- Blender integration for high-quality 3D rendering\
+- Modular configuration for camera, lighting, and rendering
+- Multiple camera path generation techniques (Spiral, Pole Rotation, Cube, etc.)
+- Blender integration for high-quality 3D rendering
 - Extensible architecture for custom camera paths
 
 ---
@@ -68,19 +68,20 @@ PyBlenderRender/
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── blend_config.py       # BlendFileConfig class
-│       │   ├── render_config.py      # RenderConfig class
 │       │   ├── camera_config.py      # CameraConfig class
-│       │   └── lighting_config.py    # LightingConfig class
+│       │   ├── lighting_config.py    # LightingConfig class
+│       │   └── render_config.py      # RenderConfig class
 │       ├── camera/
 │       │   ├── __init__.py
 │       │   ├── base.py               # Abstract base class for camera paths
 │       │   ├── paths/
 │       │   │   ├── __init__.py
-│       │   │   ├── spiral_phi.py
+│       │   │   ├── cube.py
+│       │   │   ├── orbit.py
+│       │   │   ├── pole_rotation.py
 │       │   │   ├── spiral_linear.py
 │       │   │   ├── spiral_phased.py
-│       │   │   ├── pole_rotation.py
-│       │   │   └── cube.py
+│       │   │   └── spiral_phi.py
 │       │   └── registry.py           # Camera path registry/factory
 │       └── utils/
 │           ├── __init__.py
@@ -96,8 +97,7 @@ PyBlenderRender/
 │   ├── test_data/                    # Test assets (i.e., 3D model)
 │   │   ├── test_model.glb
 ├── notebooks/                        # Jupyter Notebooks for experiments
-│   ├── render_experiments.ipynb      # Interactive rendering experiments
-│   ├── visualize_paths.ipynb         # Path visualization helper functions
+│   ├── visualize_path.ipynb          # Camera path visualization
 │
 └── .gitignore
 ```
