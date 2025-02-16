@@ -11,3 +11,7 @@ src/PyBlenderRender.egg-info/
 venv/
 .env/
 
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+
