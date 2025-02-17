@@ -76,5 +76,4 @@ class CameraConfig:
             raise ValueError("Camera density must be positive")
         if self.angular_step <= 0:
             raise ValueError("Angular step must be positive")
-            
-        # Path-specific validation is handled by the camera path generators
+

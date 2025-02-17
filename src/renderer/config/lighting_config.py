@@ -11,9 +11,10 @@ class LightType(Enum):
     SPOT = "SPOT"
 
 class LightSetup(Enum):
-    """Simple light arrangement patterns."""
-    RANDOM = "random"
-    OVERHEAD = "overhead"
+    """Light arrangement patterns."""
+    RANDOM_DYNAMIC = "random_dynamic"  # Lights follow camera
+    RANDOM_FIXED = "random_fixed"  # Lights randomized then fixed
+    OVERHEAD = "overhead"  # Fixed overhead lights
 
 @dataclass
 class LightingConfig:
@@ -24,14 +25,14 @@ class LightingConfig:
         light_type: Type of light (AREA, SUN, POINT, or SPOT)
         light_height: Height of lights above center
         light_radius: Radius for light positioning
-        light_setup: Light arrangement (RANDOM or OVERHEAD)
+        light_setup: Light arrangement pattern
         light_intensity: Light strength
     """
     num_lights: int = 1
-    light_type: LightType = LightType.POINT
+    light_type: LightType = LightType.AREA
     light_height: float = 3.0
     light_radius: float = 5.0
-    light_setup: LightSetup = LightSetup.RANDOM
+    light_setup: LightSetup = LightSetup.RANDOM_FIXED
     light_intensity: float = 0.5
     
     def __post_init__(self):

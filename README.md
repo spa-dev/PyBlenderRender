@@ -64,7 +64,7 @@ PyBlenderRender/
 ├── src/
 │   └── renderer/
 │       ├── __init__.py
-│       ├── model_renderer.py         # main rendering logic
+│       ├── model_renderer.py         # Main rendering logic
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── blend_config.py       # BlendFileConfig class
@@ -74,24 +74,34 @@ PyBlenderRender/
 │       ├── camera/
 │       │   ├── __init__.py
 │       │   ├── base.py               # Abstract base class for camera paths
-│       │   ├── paths/
-│       │   │   ├── __init__.py
-│       │   │   ├── cube.py
-│       │   │   ├── orbit.py
-│       │   │   ├── pole_rotation.py
-│       │   │   ├── spiral_linear.py
-│       │   │   ├── spiral_phased.py
-│       │   │   └── spiral_phi.py
-│       │   └── registry.py           # Camera path registry/factory
+│       │   ├── registry.py           # Camera path registry/factory
+│       │   └── paths/                # Predefined camera paths
+│       │       ├── __init__.py
+│       │       ├── cube.py
+│       │       ├── orbit.py
+│       │       ├── pole_rotation.py
+│       │       ├── spiral_linear.py
+│       │       ├── spiral_phased.py
+│       │       └── spiral_phi.py
+│       ├── lighting/
+│       │   ├── __init__.py
+│       │   ├── base.py               # Abstract base class for lighting setups
+│       │   ├── registry.py           # Lighting setup registry/factory
+│       │   └── setups/               # Predefined lighting setups
+│       │       ├── __init__.py
+│       │       ├── overhead.py
+│       │       ├── random_dynamic.py
+│       │       └── random_fixed.py
 │       └── utils/
 │           ├── __init__.py
 │           ├── coordinates.py        # SphericalCoordinate class
-│           ├── logger.py
+│           ├── logger.py             # Centralized logger
 │           └── validation.py         # Placeholder function
 ├── tests/                            # Unit tests
 │   ├── __init__.py
 │   ├── conftest.py                   # Pytest fixtures
 │   ├── test_renderer.py              # Tests for ModelRenderer
+│   ├── test_exhaustive_render.py     # Exhaustive rendering tests
 │   ├── config/
 │   │   ├── test_configs.py           # Tests for configurations
 │   ├── test_data/                    # Test assets (i.e., 3D model)

@@ -1,5 +1,6 @@
 # src/renderer/model_renderer.py
-        
+
+import gc        
 import math
 import os
 import sys
@@ -18,7 +19,10 @@ from .config.camera_config import CameraConfig
 from .config.blend_config import BlendFileConfig
 from .utils.coordinates import SphericalCoordinate
 from .utils.logger import logger
-from .camera.registry import registry as camera_registry
+#from .camera.registry import registry as camera_registry
+#from .lighting.registry import registry as lighting_resistry
+from .camera import camera_registry
+from .lighting import lighting_registry
 
 @contextmanager
 def stdout_redirected(to=os.devnull):
@@ -42,7 +46,7 @@ class ModelRenderer:
     Provides functionality to render 3D models using Blender's Cycles engine,
     supporting multiple camera path types, lighting configurations, and render settings.
     The renderer handles multiple file formats and can generate multiple views
-    based on configurable camera paths.
+    based on configurable camera paths and lighting setups.
     
     Parameters
     ----------
@@ -68,7 +72,7 @@ class ModelRenderer:
         - light_type: Type of light (LightType.AREA, SUN, POINT, or SPOT)
         - light_height: Height of lights above center (default: 3.0)
         - light_radius: Radius for light positioning (default: 5.0)
-        - light_setup: Light arrangement (LightSetup.RANDOM or OVERHEAD)
+        - light_setup: Light arrangement (default: LightSetup.RANDOM_FIXED)
         - light_intensity: Light strength (default: 0.5)
         If not provided, uses default LightingConfig settings.
     
@@ -79,7 +83,7 @@ class ModelRenderer:
         - max_elevation: Maximum vertical angle (default: 90.0)
         - roll: Camera roll angle (default: 0.0)
         - camera_path_type: Type of camera path (default: CameraPathType.CUBE)
-        - camera_density: Number of total images for phi spiral (default: 35)
+        - camera_density: Number of cameras for orbit and phi spiral (default: 35)
         - angular_step: Base angular step for linear and phased spiral (default: 45.0)
         - sphere_coverage: Camera coverage (SphereCoverage.FULL or SphereCoverage.HALF)
         If not provided, uses default CameraConfig settings.
@@ -115,7 +119,7 @@ class ModelRenderer:
     -----
     - When importing .blend files, existing scene elements may be preserved
       or replaced based on the BlendFileConfig settings.
-    - Camera paths are handled by generators.
+    - Camera paths and lighting setups are handled by generators.
     - If SphereCoverage.HALF is specified, camera_density will be half 
       that expected.
     - Blender console output messages are discarded.
@@ -310,7 +314,7 @@ class ModelRenderer:
         el_rad = math.radians(coord.elevation)
         roll_rad = math.radians(coord.roll)
 
-        #  Spherical to Cartesian Conversion
+        #  Spherical to Cartesian Conversion (Z-up)
         x = coord.radius * math.cos(el_rad) * math.sin(az_rad)
         y = coord.radius * math.cos(el_rad) * math.cos(az_rad)
         z = coord.radius * math.sin(el_rad)
@@ -323,7 +327,6 @@ class ModelRenderer:
         
         camera.rotation_mode = 'XYZ'
         camera.rotation_euler = euler
-
         camera.rotation_euler.rotate_axis('Z', roll_rad)
         
     def _generate_camera_positions(self) -> List[SphericalCoordinate]:
@@ -335,40 +338,9 @@ class ModelRenderer:
 
     def _setup_lighting(self) -> List[bpy.types.Object]:
         """Create lighting setup based on configuration."""
-        lights = []
-        for _ in range(self.lighting_config.num_lights):
-            bpy.ops.object.light_add(type=self.lighting_config.light_type.value)
-            light = bpy.context.active_object
-            
-            #  Note: Light energy calculation does not account
-            #  for all possible light types consistently.
-            light.data.energy = (
-                5 * self.lighting_config.light_intensity 
-                if self.lighting_config.light_type == LightType.SUN
-                else 1000 * self.lighting_config.light_intensity
-            )
-            
-            if self.lighting_config.light_type == LightType.AREA:
-                light.data.size = 2
-                
-            lights.append(light)
-            
-            if self.lighting_config.light_setup == LightSetup.OVERHEAD:
-                light.location = (0, 0, self.lighting_config.light_height)
-                light.rotation_euler = (0, 0, 0)
-        return lights
-
-    def _position_lights_random(self, lights: List[bpy.types.Object], camera_angle: float) -> None:
-        """Position lights randomly relative to camera angle."""
-        base_angles = np.linspace(0, 360, len(lights), endpoint=False)
-        
-        for light, base_angle in zip(lights, base_angles):
-            if self.lighting_config.light_setup == LightSetup.RANDOM:
-                angle = (base_angle + camera_angle) % 360
-                x = self.lighting_config.light_radius * math.cos(math.radians(angle))
-                y = self.lighting_config.light_radius * math.sin(math.radians(angle))
-                light.location = (x, y, self.lighting_config.light_height)
-                light.rotation_euler = (math.radians(-45), 0, math.radians(angle))
+        setup_class = lighting_registry.get_setup(self.lighting_config.light_setup.value)
+        self.light_setup = setup_class(self.lighting_config)
+        return self.light_setup.create_lights()
 
     def render(self, model_path: str, output_dir: str) -> None:
         """Render the model from multiple angles and save to output directory."""
@@ -394,8 +366,12 @@ class ModelRenderer:
                 for i, coord in enumerate(camera_positions):
                     self._position_camera(camera, coord)
                     
-                    if self.lighting_config.light_setup == LightSetup.RANDOM:
-                        self._position_lights_random(lights, coord.azimuth)
+                    # Delegate light position updates to the setup
+                    self.light_setup.update_positions(coord.azimuth)
+                    # Each setup class handles this differently:
+                    # - RandomDynamicSetup: repositions lights based on camera angle
+                    # - RandomFixedSetup: does nothing (lights stay in initial positions)
+                    # - OverheadSetup: does nothing (lights stay overhead)
                     
                     output_path = os.path.join(
                         output_dir, 
@@ -434,11 +410,15 @@ class ModelRenderer:
             raise RuntimeError(f"Render operation failed: {str(e)}")
 
         finally:
-            # Reset Blender scene to factory settings
+            # Ensure all objects are removed
             bpy.ops.object.select_all(action='SELECT')
-            bpy.ops.object.delete() 
+            bpy.ops.object.delete()
+            # Reset Blender scene to factory settings
             bpy.ops.wm.read_factory_settings(use_empty=True)
             logger.info("Blender scene reset to factory settings.")
+            # Clear renderer variables and memory
+            del camera, lights, camera_positions
+            gc.collect()
 
     def get_render_stats(self) -> dict:
         """Return statistics about the last render operation."""

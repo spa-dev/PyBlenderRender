@@ -1,9 +1,7 @@
 # src/renderer/camera/registry.py
-
 from typing import Dict, Type, List
 
 from renderer.utils.logger import logger
-
 from .base import CameraPathGenerator
 from .paths.cube import CubePathGenerator
 from .paths.orbit import OrbitPathGenerator
@@ -54,12 +52,12 @@ class CameraPathRegistry:
         return list(self._generators.keys())
 
 # Initialize the registry with paths
-registry = CameraPathRegistry()
-registry.register(CubePathGenerator)
-registry.register(OrbitPathGenerator)
-registry.register(SpiralPhiPathGenerator)
-registry.register(PoleRotationPathGenerator)
-registry.register(SpiralLinearPathGenerator)
-registry.register(SpiralPhasedPathGenerator)
+camera_registry = CameraPathRegistry()
+camera_registry.register(CubePathGenerator)
+camera_registry.register(OrbitPathGenerator)
+camera_registry.register(SpiralPhiPathGenerator)
+camera_registry.register(PoleRotationPathGenerator)
+camera_registry.register(SpiralLinearPathGenerator)
+camera_registry.register(SpiralPhasedPathGenerator)
 # Register new generators here...
 

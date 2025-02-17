@@ -26,12 +26,6 @@ def test_render_with_configs(renderer, test_model_path, output_dir, configs):
     stats = renderer_with_configs.get_render_stats()
     assert stats['successful_renders'] > 0
 
-#def test_invalid_model_path(renderer, output_dir):
-#    """Test that appropriate error is raised for an invalid model path."""
-#    invalid_path = output_dir / "nonexistent_model.glb"
-#    with pytest.raises(RuntimeError, match="Model file not found"):
-#        renderer.render(invalid_path, output_dir)
-
 def test_invalid_model_path(renderer, output_dir):
     """Test that appropriate error is raised for an invalid model path."""
     invalid_path = os.path.join(output_dir, "nonexistent_model.glb")
