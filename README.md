@@ -119,12 +119,6 @@ reach a suitable level.
 
 ---
 
-## **Roadmap**
-
-- Multiprocessing – Improve performance by parallel processing of rendering
-
----
-
 ## **Extending the Project**
 
 Want to add a custom camera path?
