@@ -6,7 +6,7 @@
 - Modular configuration for camera, lighting, and rendering
 - Multiple camera path generation techniques (Spiral, Pole Rotation, Cube, etc.)
 - Blender Python API for high-quality 3D rendering
-- Extensible architecture for custom camera paths
+- Extensible architecture for custom camera paths and lighting setups
 
 ---
 
@@ -46,7 +46,12 @@ renderer.render()  # Runs rendering pipeline
 from src.renderer.config.camera_config import CameraConfig
 from src.renderer.model_renderer import ModelRenderer
 
-custom_camera = CameraConfig(distance=15.0, camera_density=30)
+custom_camera = CameraConfig(
+    distance=15.0, 
+    camera_density=30, 
+    path_type=CameraPathType.SPIRAL_PHI
+)
+
 renderer = ModelRenderer(camera_config=custom_camera)
 renderer.render()
 ```
@@ -65,8 +70,7 @@ The model is Rubik's Cube by BeyondDigital (see Attributions below) and script i
 ---
 
 ### 3D Path Visualization  
-This GIF is an animated visualization of a **3D camera path** created from `visualize_path.ipynb`. 
-The notebook is located at:  
+This GIF is an animated visualization of a **3D camera path** created from `visualize_path.ipynb`. The notebook is located at:  
 📂 `PyBlenderRender/notebooks/visualize_path.ipynb`  
 
 **Spiral Linear Camera Path:**  
