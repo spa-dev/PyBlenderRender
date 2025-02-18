@@ -14,6 +14,7 @@ setup(
     #},
     #include_package_data=True,
     install_requires=[
+        "bpy>=4.0",
         "numpy",
         "tqdm",
         # List other dependencies here

@@ -14,18 +14,17 @@
 
 ### **Prerequisites**
 
-- **TBD**
-- **TBD**
-- **TBD**
+- Python 3.7 or later
+- Blender Python API 4.0 or later
 
 ### **Install Dependencies**
 
 Clone the repository and install the required dependencies:
 
 ```bash
-git clone https://github.com/yourusername/PyBlenderRender.git  
+git clone https://github.com/spa-dev/PyBlenderRender.git  
 cd PyBlenderRender  
-pip install -r requirements.txt  
+pip install .  
 ```
 
 ---
