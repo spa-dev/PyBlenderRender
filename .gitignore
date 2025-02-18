@@ -7,11 +7,15 @@ __pycache__/
 # Ignore egg-info directory
 src/PyBlenderRender.egg-info/
 
+# Ignore test_outputs directory
+tests/test_output
+
 # Ignore virtual environment
 venv/
 .env/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
+
 
 
