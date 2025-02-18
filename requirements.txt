@@ -1,0 +1,6 @@
+bpy>=4.0         # Blender Python API
+numpy            # Numerical computations
+tqdm             # Progress bar
+
+
+
