@@ -28,18 +28,37 @@ class BaseLightSetup(ABC):
         pass
 
     def _create_light(self) -> bpy.types.Object:
-        """Helper method to create a single light with common properties."""
+        """
+        Helper method to create a single light with realistic properties. 
+
+        Notes:
+        - Watt values are radiant flux, NOT electrical watts. 
+        - Blender's default energy for all lights is 10.0.
+        """
         bpy.ops.object.light_add(type=self.config.light_type.value)
         light = bpy.context.active_object
-        
-        light.data.energy = (
-            5 * self.config.light_intensity 
-            if self.config.light_type == LightType.SUN
-            else 1000 * self.config.light_intensity
-        )
-        
-        if self.config.light_type == LightType.AREA:
-            light.data.size = 2
-            
+
+        # Adjust energy calculation based on real-world values
+        if self.config.light_type == LightType.SUN:
+            # Approximate clear sky sunlight: 1000 W/m²
+            # Use Blender's default of 10 (1000 is crazy bright):
+            light.data.energy = 10 * self.config.light_intensity
+
+        elif self.config.light_type == LightType.AREA:
+            # Approximate 4W output, matching a 1500lm PAR38 floodlight
+            light.data.energy = 4 * self.config.light_intensity
+            # Default shape: ‘SQUARE’ | 
+            # Other options: ‘RECTANGLE’, ‘DISK’, ‘ELLIPSE’
+            # Default size: 0.25 (X and Y dimensions)
+
+        elif self.config.light_type == LightType.SPOT:
+            # Approximate 22W output
+            light.data.energy = 22 * self.config.light_intensity
+            # Default spot size in Blender: 0.785398 (45 degrees)
+
+        else:  # POINT light
+            # Approximate 2.9W output, matching a 1000lm standard bulb
+            light.data.energy = 2.9 * self.config.light_intensity
+
         return light
 
