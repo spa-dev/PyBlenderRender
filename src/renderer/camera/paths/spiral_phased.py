@@ -5,9 +5,9 @@ consistent steps."""
 
 from typing import List
 
-from ..base import CameraPathGenerator
-from ...config.camera_config import CameraConfig, SphereCoverage
-from ...utils.coordinates import SphericalCoordinate
+from renderer.camera.base import CameraPathGenerator
+from renderer.config.camera_config import CameraConfig, SphereCoverage
+from renderer.utils.coordinates import SphericalCoordinate
 
 class SpiralPhasedPathGenerator(CameraPathGenerator):
     """Generates camera positions in a spiral pattern with adaptive step sizing."""

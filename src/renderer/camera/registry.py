@@ -2,13 +2,13 @@
 from typing import Dict, Type, List
 
 from renderer.utils.logger import logger
-from .base import CameraPathGenerator
-from .paths.cube import CubePathGenerator
-from .paths.orbit import OrbitPathGenerator
-from .paths.spiral_phi import SpiralPhiPathGenerator
-from .paths.spiral_linear import SpiralLinearPathGenerator
-from .paths.spiral_phased import SpiralPhasedPathGenerator
-from .paths.pole_rotation import PoleRotationPathGenerator
+from renderer.camera.base import CameraPathGenerator
+from renderer.camera.paths.cube import CubePathGenerator
+from renderer.camera.paths.orbit import OrbitPathGenerator
+from renderer.camera.paths.spiral_phi import SpiralPhiPathGenerator
+from renderer.camera.paths.spiral_linear import SpiralLinearPathGenerator
+from renderer.camera.paths.spiral_phased import SpiralPhasedPathGenerator
+from renderer.camera.paths.pole_rotation import PoleRotationPathGenerator
 # Import other generators...
 
 class CameraPathRegistry:

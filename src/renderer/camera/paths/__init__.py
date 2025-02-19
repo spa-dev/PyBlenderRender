@@ -1,12 +1,12 @@
 # src/renderer/camera/paths/__init__.py
 """Camera path generators for different camera movement patterns."""
 
-from .cube import CubePathGenerator
-from .orbit import OrbitPathGenerator
-from .pole_rotation import PoleRotationPathGenerator
-from .spiral_phi import SpiralPhiPathGenerator
-from .spiral_linear import SpiralLinearPathGenerator
-from .spiral_phased import SpiralPhasedPathGenerator
+from renderer.camera.paths.cube import CubePathGenerator
+from renderer.camera.paths.orbit import OrbitPathGenerator
+from renderer.camera.paths.pole_rotation import PoleRotationPathGenerator
+from renderer.camera.paths.spiral_phi import SpiralPhiPathGenerator
+from renderer.camera.paths.spiral_linear import SpiralLinearPathGenerator
+from renderer.camera.paths.spiral_phased import SpiralPhasedPathGenerator
 
 __all__ = [
     'CubePathGenerator',

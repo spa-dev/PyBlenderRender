@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 from renderer.utils.logger import logger
-from ..utils.coordinates import SphericalCoordinate
+from renderer.utils.coordinates import SphericalCoordinate
 
 class CameraPathGenerator(ABC):
     """Abstract base class for all camera path generators."""

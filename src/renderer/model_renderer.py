@@ -13,16 +13,14 @@ import numpy as np
 from mathutils import Vector
 from tqdm import tqdm
 
-from .config.render_config import RenderConfig, Background
-from .config.lighting_config import LightingConfig, LightType, LightSetup
-from .config.camera_config import CameraConfig
-from .config.blend_config import BlendFileConfig
-from .utils.coordinates import SphericalCoordinate
-from .utils.logger import logger
-#from .camera.registry import registry as camera_registry
-#from .lighting.registry import registry as lighting_resistry
-from .camera import camera_registry
-from .lighting import lighting_registry
+from renderer.config.render_config import RenderConfig, Background
+from renderer.config.lighting_config import LightingConfig
+from renderer.config.camera_config import CameraConfig
+from renderer.config.blend_config import BlendFileConfig
+from renderer.utils.coordinates import SphericalCoordinate
+from renderer.utils.logger import logger
+from renderer.camera import camera_registry
+from renderer.lighting import lighting_registry
 
 @contextmanager
 def stdout_redirected(to=os.devnull):
@@ -416,8 +414,7 @@ class ModelRenderer:
             # Reset Blender scene to factory settings
             bpy.ops.wm.read_factory_settings(use_empty=True)
             logger.info("Blender scene reset to factory settings.")
-            # Clear renderer variables and memory
-            del camera, lights, camera_positions
+            # Garbage collect
             gc.collect()
 
     def get_render_stats(self) -> dict:

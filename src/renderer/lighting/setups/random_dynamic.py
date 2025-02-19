@@ -1,7 +1,7 @@
 # src/renderer/lighting/setups/random_dynamic.py
 import math
 import numpy as np
-from ..base import BaseLightSetup
+from renderer.lighting.base import BaseLightSetup
 from typing import List
 import bpy
             

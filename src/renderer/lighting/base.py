@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 import bpy
-from ..config.lighting_config import LightingConfig, LightType
+from renderer.config.lighting_config import LightingConfig, LightType
 
 class BaseLightSetup(ABC):
     """Abstract base class for light arrangement strategies."""

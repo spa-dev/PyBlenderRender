@@ -3,9 +3,9 @@
 from typing import List
 import numpy as np
 
-from ..base import CameraPathGenerator
-from ...config.camera_config import CameraConfig, SphereCoverage
-from ...utils.coordinates import SphericalCoordinate
+from renderer.camera.base import CameraPathGenerator
+from renderer.config.camera_config import CameraConfig, SphereCoverage
+from renderer.utils.coordinates import SphericalCoordinate
 
 class SpiralPhiPathGenerator(CameraPathGenerator):
     """Generates camera positions for spiral view (phi)."""

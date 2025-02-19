@@ -1,11 +1,7 @@
 # src/renderer/camera/__init__.py
-#from .base import CameraPathGenerator
-#from .registry import CameraPathRegistry, registry
-
-# src/renderer/camera/__init__.py
-from .registry import camera_registry
-from .base import CameraPathGenerator
-from .paths import (
+from renderer.camera.base import CameraPathGenerator
+from renderer.camera.registry import camera_registry
+from renderer.camera.paths import (
     CubePathGenerator,
     OrbitPathGenerator,
     SpiralPhiPathGenerator,

@@ -1,5 +1,5 @@
 # src/renderer/lighting/setups/overhead.py
-from ..base import BaseLightSetup
+from renderer.lighting.base import BaseLightSetup
 from typing import List
 import bpy
 

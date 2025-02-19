@@ -2,10 +2,10 @@
 from typing import Dict, Type, List
 
 from renderer.utils.logger import logger
-from .base import BaseLightSetup
-from .setups.overhead import OverheadLightSetup
-from .setups.random_dynamic import RandomDynamicLightSetup
-from .setups.random_fixed import RandomFixedLightSetup
+from renderer.lighting.base import BaseLightSetup
+from renderer.lighting.setups.overhead import OverheadLightSetup
+from renderer.lighting.setups.random_dynamic import RandomDynamicLightSetup
+from renderer.lighting.setups.random_fixed import RandomFixedLightSetup
 
 class LightingRegistry:
     """
