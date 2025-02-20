@@ -34,7 +34,7 @@ pip install .
 ### **1. Basic Example: Render with Default Settings**
 
 ```python
-from src.renderer.model_renderer import ModelRenderer
+from renderer.model_renderer import ModelRenderer
 
 renderer = ModelRenderer()  # Uses default configs
 renderer.render("model.glb", "output_renders")  # Run pipeline
@@ -43,9 +43,9 @@ renderer.render("model.glb", "output_renders")  # Run pipeline
 ### **2. Custom Camera Configuration**
 
 ```python
-from src.renderer.config.render_config import RenderConfig
-from src.renderer.config.camera_config import CameraConfig, CameraPathType
-from src.renderer.model_renderer import ModelRenderer
+from renderer.config.render_config import RenderConfig
+from renderer.config.camera_config import CameraConfig, CameraPathType
+from renderer.model_renderer import ModelRenderer
 
 custom_render_config = RenderConfig(resolution=(300,600), samples=2048)
 custom_camera_config = CameraConfig(
