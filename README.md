@@ -37,23 +37,29 @@ pip install .
 from src.renderer.model_renderer import ModelRenderer
 
 renderer = ModelRenderer()  # Uses default configs
-renderer.render()  # Runs rendering pipeline
+renderer.render("model.glb", "output_renders")  # Run pipeline
 ```
 
 ### **2. Custom Camera Configuration**
 
 ```python
-from src.renderer.config.camera_config import CameraConfig
+from src.renderer.config.render_config import RenderConfig
+from src.renderer.config.camera_config import CameraConfig, CameraPathType
 from src.renderer.model_renderer import ModelRenderer
 
-custom_camera = CameraConfig(
+custom_render_config = RenderConfig(resolution=(300,600), samples=2048)
+custom_camera_config = CameraConfig(
     distance=15.0, 
     camera_density=30, 
     path_type=CameraPathType.SPIRAL_PHI
 )
 
-renderer = ModelRenderer(camera_config=custom_camera)
-renderer.render()
+renderer = ModelRenderer(
+    render_config=custom_render_config,
+    camera_config=custom_camera_config
+)
+
+renderer.render("model.glb", "output_renders")
 ```
 ---
  
@@ -94,7 +100,6 @@ PyBlenderRender/
 │   └── __init__.py
 ├── tests/                            # Unit tests
 ├── notebooks/                        # Jupyter Notebooks for experiments
-│   ├── visualize_path.ipynb          # Camera path visualization
 ├── scripts/                          # Utility scripts
 ├── docs/                             # Documentation
 └── .gitignore
@@ -116,6 +121,12 @@ ways, especially at extreme elevations.
 Light energy calculation does not account for all possible light types  
 consistently. Try varying `light_intensity` in `LightingConfig` until you  
 reach a suitable level.
+
+### Camera Elevation Limits Not Implemented Yet
+
+The `min_elevation` and `max_elevation` attributes in the `CameraConfig` 
+class are currently defined but not implemented. These attributes do not 
+affect camera positioning yet.
 
 ---
 
