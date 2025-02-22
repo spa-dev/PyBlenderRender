@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="PyBlenderRender",
-    version="0.2.1",
+    version="0.2.2",
     author='spa-dev',
     description="A Python package for rendering 3D models using Blender.",
     long_description=open("README.md").read(),
