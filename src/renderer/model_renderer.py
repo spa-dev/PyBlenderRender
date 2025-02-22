@@ -137,33 +137,47 @@ class ModelRenderer:
         self.camera_config = camera_config or CameraConfig()
         self.render_stats = {}
         
+    def _clear_scene(self) -> None:
+        """Clear the current scene while preserving critical settings."""
+        # Select and remove all visible objects
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.delete()
+        # Remove orphaned meshes, materials, etc.
+        bpy.ops.outliner.orphans_purge()
+    
     def _setup_scene(self) -> None:
         """Configure the basic scene settings and render engine."""
+        
+        self._clear_scene()
+        scene = bpy.context.scene
+
         #  Configure engine
-        bpy.context.scene.render.engine = 'CYCLES'
-        bpy.context.scene.cycles.samples = self.render_config.samples
-        bpy.context.scene.cycles.use_adaptive_sampling = True
-        bpy.context.scene.cycles.use_denoising = self.render_config.use_denoising
+        scene.render.engine = 'CYCLES'
+        #TODO: refactor to scene.render.engine = self.render_config.engine.value
+        
+        scene.cycles.samples = self.render_config.samples
+        scene.cycles.use_adaptive_sampling = True
+        scene.cycles.use_denoising = self.render_config.use_denoising
         
         #  Untested alternatives:     
-        #  bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+        #  bpy.context.scene.render.engine = 'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT'
         #  bpy.context.scene.eevee.use_ssr = True  # Enable screen-space reflections
         #  bpy.context.scene.eevee.use_bloom = True  # Enable bloom for glow effects
 
         if self.render_config.device == "GPU":
-            bpy.context.scene.cycles.device = 'GPU'
+            scene.cycles.device = 'GPU'
             #  bpy.context.preferences.addons["cycles"].preferences.compute_device_type = \
             #      "CUDA"  # or "HIP" for AMD
 
-        bpy.context.scene.render.resolution_x = self.render_config.resolution_x
-        bpy.context.scene.render.resolution_y = self.render_config.resolution_y
-        bpy.context.scene.render.film_transparent = (
+        scene.render.resolution_x = self.render_config.resolution_x
+        scene.render.resolution_y = self.render_config.resolution_y
+        scene.render.film_transparent = (
             self.render_config.background == Background.TRANSPARENT
         )
       
         # Configure world settings
-        world = bpy.context.scene.world or bpy.data.worlds.new("World")
-        bpy.context.scene.world = world
+        world = scene.world or bpy.data.worlds.new("World")
+        scene.world = world
         world.use_nodes = True
         bg = world.node_tree.nodes["Background"]
         bg.inputs[0].default_value = (
@@ -173,27 +187,26 @@ class ModelRenderer:
         bg.inputs[1].default_value = self.lighting_config.light_intensity
 
         # Check materials
-        for obj in bpy.context.scene.objects:
+        for obj in scene.objects:
             if obj.type == "MESH" and not obj.data.materials:
                 logger.warning(f"Object {obj.name} has no materials!")
 
     def _import_model(self, filepath: str) -> None:
         """Import 3D model based on file extension."""
-
-        # Clear scene. TODO: refactor to self._clear_scene()
-        # Remove all objects except the world settings.
-        bpy.ops.object.select_all(action='SELECT')
-        bpy.ops.object.delete()
-        # Remove orphaned meshes, materials, etc.
-        bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
-
+      
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Model file not found: {filepath}")
-            
+
         ext = os.path.splitext(filepath)[1].lower()
 
         if ext == '.blend':
-            bpy.ops.wm.open_mainfile(filepath=filepath)
+            # Open .blend file with minimal UI/script loading
+            bpy.ops.wm.open_mainfile(
+                filepath=filepath,
+                load_ui=False,
+                use_scripts=False,
+                display_file_selector=False
+        )
             self._handle_blend_file_settings()
             return
         
@@ -219,7 +232,7 @@ class ModelRenderer:
             bpy.context.view_layer.objects.active = obj    
         
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
-        #  Options include type='ORIGIN_CENTER_OF_MASS', center='MEDIAN', or others
+        #  TODO: Options include type='ORIGIN_CENTER_OF_MASS', center='MEDIAN', or others
 
         #  Align model to X axis (buggy)
         #  bpy.ops.object.transform_apply(rotation=True)
@@ -229,12 +242,22 @@ class ModelRenderer:
         """Handle configuration differences between .blend file and renderer settings."""
         scene = bpy.context.scene
         
+        # Force render engine to CYCLES
+        if scene.render.engine != "CYCLES":
+            logger.info(
+                f"Render engine in .blend file set to: {scene.render.engine}. "
+                "Forcing render engine to CYCLES."
+            )
+            scene.render.engine = "CYCLES"
+        
         # Handle render settings
         if self.render_config.device == "GPU":
             scene.cycles.device = 'GPU'
+
         scene.render.resolution_x = self.render_config.resolution_x
         scene.render.resolution_y = self.render_config.resolution_y
         scene.cycles.samples = self.render_config.samples
+        scene.cycles.use_adaptive_sampling = True
         scene.cycles.use_denoising = self.render_config.use_denoising
         scene.render.film_transparent = (
             self.render_config.background == Background.TRANSPARENT
@@ -408,9 +431,8 @@ class ModelRenderer:
             raise RuntimeError(f"Render operation failed: {str(e)}")
 
         finally:
-            # Ensure all objects are removed
-            bpy.ops.object.select_all(action='SELECT')
-            bpy.ops.object.delete()
+            # Clear objects
+            self._clear_scene()
             # Reset Blender scene to factory settings
             bpy.ops.wm.read_factory_settings(use_empty=True)
             logger.info("Blender scene reset to factory settings.")
