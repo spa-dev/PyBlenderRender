@@ -13,7 +13,9 @@ import numpy as np
 from mathutils import Vector
 from tqdm import tqdm
 
-from renderer.config.render_config import RenderConfig, Background
+from renderer.config.render_config import (
+    RenderConfig, Background, RenderEngine
+)
 from renderer.config.lighting_config import LightingConfig
 from renderer.config.camera_config import CameraConfig
 from renderer.config.blend_config import BlendFileConfig
@@ -40,8 +42,8 @@ def stdout_redirected(to=os.devnull):
 class ModelRenderer:
     """A class for rendering 3D models with configurable camera paths,  
     lighting, and render settings.
-    
-    Provides functionality to render 3D models using Blender's Cycles engine,
+      
+    Provides functionality to render 3D models using Blender's Cycles or EEVEE engine,
     supporting multiple camera path types, lighting configurations, and render settings.
     The renderer handles multiple file formats and can generate multiple views
     based on configurable camera paths and lighting setups.
@@ -59,9 +61,17 @@ class ModelRenderer:
         Configuration for rendering settings:
         - resolution: Output resolution in pixels (default: 1024)
         - samples: Number of render samples (default: 128)
-        - device: Render device, "GPU" or "CPU" (default: "GPU")
-        - use_denoising: Whether to use denoising (default: True)
-        - background: Background type (Background.WHITE or Background.TRANSPARENT)
+        - engine: Render engine (RenderEngine.CYCLES or RenderEngine.EEVEE,
+          default: CYCLES)
+        - device: Render device, "GPU" or "CPU" (default: "GPU", Cycles only)
+        - background: Background type (Background.WHITE or Background.TRANSPARENT,
+          default: WHITE)
+        - cycles_settings: Settings specific to Cycles engine:
+            - use_adaptive_sampling: Whether to use adaptive sampling (default: True)
+            - use_denoising: Whether to use denoising (default: True)
+        - eevee_settings: Settings specific to EEVEE engine:
+            - use_raytracing: Whether to use raytracing (default: True)
+            - use_shadows: Whether to enable shadow casting (default: False)
         If not provided, uses default RenderConfig settings.
     
     lighting_config : LightingConfig, optional
@@ -104,7 +114,12 @@ class ModelRenderer:
     Examples
     --------
     >>> renderer = ModelRenderer(
-    ...     render_config=RenderConfig(resolution=(300,600), samples=256),
+    ...     render_config=RenderConfig(
+    ...         resolution=(600,1200),
+    ...         samples=30,
+    ...         engine=RenderEngine.EEVEE,
+    ...         eevee_settings=EeveeSettings(use_raytracing=True)
+    ...     ),    
     ...     camera_config=CameraConfig(
     ...         camera_path_type=CameraPathType.SPIRAL_PHI,
     ...         camera_density=50
@@ -151,24 +166,93 @@ class ModelRenderer:
         self._clear_scene()
         scene = bpy.context.scene
 
-        #  Configure engine
-        scene.render.engine = 'CYCLES'
-        #TODO: refactor to scene.render.engine = self.render_config.engine.value
-        
-        scene.cycles.samples = self.render_config.samples
-        scene.cycles.use_adaptive_sampling = True
-        scene.cycles.use_denoising = self.render_config.use_denoising
-        
-        #  Untested alternatives:     
-        #  bpy.context.scene.render.engine = 'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT'
-        #  bpy.context.scene.eevee.use_ssr = True  # Enable screen-space reflections
-        #  bpy.context.scene.eevee.use_bloom = True  # Enable bloom for glow effects
+        # TODO: Settings may be overwritten when .blend files are imported.
+        # Need to store/restore initial settings or adjust order of operations.
 
-        if self.render_config.device == "GPU":
-            scene.cycles.device = 'GPU'
-            #  bpy.context.preferences.addons["cycles"].preferences.compute_device_type = \
-            #      "CUDA"  # or "HIP" for AMD
+        # Configure render engine
+        scene.render.engine = self.render_config.engine.value
 
+        # Configure engine-specific settings
+        if self.render_config.engine == RenderEngine.CYCLES:
+            scene.cycles.samples = self.render_config.samples
+            scene.cycles.use_adaptive_sampling = (
+                self.render_config.cycles_settings.use_adaptive_sampling
+            )
+            scene.cycles.use_denoising = (
+                self.render_config.cycles_settings.use_denoising
+            )
+            # Handle GPU settings for Cycles
+            if self.render_config.device == "GPU":
+                try:
+                    # Access Cycles preferences
+                    prefs = bpy.context.preferences
+                    cycles_addon = prefs.addons.get("cycles")
+                    
+                    if not cycles_addon:
+                        raise RuntimeError("Cycles addon not found in preferences")
+                    
+                    cprefs = cycles_addon.preferences
+                    cprefs.refresh_devices()
+                    
+                    # Check device availability
+                    optix_devices = [d for d in cprefs.devices if d.type == "OPTIX"]
+                    cuda_devices = [d for d in cprefs.devices if d.type == "CUDA"]
+                    hip_devices = [d for d in cprefs.devices if d.type == "HIP"]
+                    
+                    # Set compute device type and disable others
+                    # OPTIX (RTX GPU) is preferred over CUDA 
+                    if optix_devices:
+                        logger.info("Configuring OptiX as primary compute device")
+                        cprefs.compute_device_type = "OPTIX"
+                        # Enable only OptiX devices
+                        for device in cprefs.devices:
+                            device.use = (device.type == "OPTIX")
+                            if device.use:
+                                logger.info(f"Activating device: {device.name} ({device.type})")
+                            else:
+                                logger.info(f"Deactivating device: {device.name} ({device.type})")
+                    elif cuda_devices:
+                        logger.info("Configuring CUDA as primary compute device")
+                        cprefs.compute_device_type = "CUDA"
+                        # Enable only CUDA devices
+                        for device in cprefs.devices:
+                            device.use = (device.type == "CUDA")
+                            if device.use:
+                                logger.info(f"Activating device: {device.name} ({device.type})")
+                            else:
+                                logger.info(f"Deactivating device: {device.name} ({device.type})")
+                    elif hip_devices:
+                        logger.info("Configuring HIP as primary compute device")
+                        cprefs.compute_device_type = "HIP"
+                        # Enable only HIP devices
+                        for device in cprefs.devices:
+                            device.use = (device.type == "HIP")
+                            if device.use:
+                                logger.info(f"Activating device: {device.name} ({device.type})")
+                            else:
+                                logger.info(f"Deactivating device: {device.name} ({device.type})")
+                    else:
+                        raise RuntimeError("No compatible GPU compute devices found")
+                    
+                    cprefs.refresh_devices()
+                    scene.cycles.device = 'GPU'
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to configure GPU rendering: {str(e)}")
+                    logger.warning("Falling back to CPU rendering")
+                    scene.cycles.device = 'CPU'
+        
+        elif self.render_config.engine == RenderEngine.EEVEE:
+            scene.eevee.taa_render_samples = self.render_config.samples
+            scene.eevee.use_raytracing = self.render_config.eevee_settings.use_raytracing
+            scene.eevee.use_shadows = self.render_config.eevee_settings.use_shadows
+            # EEVEE uses OpenGL to render on GPU. No CPU option.
+
+        logger.info(f"Scene configured with {scene.render.engine} rendering")
+        if self.render_config.engine == RenderEngine.CYCLES:
+            logger.info(f"Using device: {scene.cycles.device}")
+
+        # Configure resolution and transparency
         scene.render.resolution_x = self.render_config.resolution_x
         scene.render.resolution_y = self.render_config.resolution_y
         scene.render.film_transparent = (
@@ -276,7 +360,9 @@ class ModelRenderer:
                 bpy.data.materials.remove(material, do_unlink=True)
                 
         # Remove cameras (always remove existing cameras)
-        existing_camera = next((obj for obj in scene.objects if obj.type == 'CAMERA'), None)
+        existing_camera = next(
+            (obj for obj in scene.objects if obj.type == "CAMERA"), None
+        )
         if existing_camera:
             bpy.data.objects.remove(existing_camera, do_unlink=True)
         
@@ -290,7 +376,9 @@ class ModelRenderer:
                         background_node.inputs[0].default_value = (1, 1, 1, 1)
                     else:
                         background_node.inputs[0].default_value = (0, 0, 0, 0)
-                    background_node.inputs[1].default_value = self.lighting_config.light_intensity
+                    background_node.inputs[1].default_value = (
+                        self.lighting_config.light_intensity
+                    )
 
     def _setup_camera(self) -> bpy.types.Object:
         """Create and configure camera with tracking."""
@@ -319,7 +407,7 @@ class ModelRenderer:
         #track_constraint.up_axis = 'UP_Y'
 
         # "DAMPED_TRACK" to avoid gimbal lock and instability near poles.
-        # Has issues with maintaining a uniform distance from all angles.
+        # May have issues with maintaining a uniform distance from all angles.
         track_constraint = (
             camera.constraints.get("Damped Track") or 
             camera.constraints.new(type='DAMPED_TRACK')
@@ -354,7 +442,6 @@ class ModelRenderer:
         """Generate camera positions based on the selected path type."""
         path_type = self.camera_config.camera_path_type.value
         generator = camera_registry.get_generator(path_type)
-        # Return camera positions
         return generator.generate_positions(self.camera_config)
 
     def _setup_lighting(self) -> List[bpy.types.Object]:

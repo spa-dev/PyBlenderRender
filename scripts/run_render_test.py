@@ -1,8 +1,7 @@
-# If installing as a package comment out the modification to sys.path:
 import sys
 import os
-# Ensure the src/ directory is in the import path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+# If not installed as package, ensure the src/ directory is in the import path:
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 # Imports
 import argparse
@@ -110,31 +109,32 @@ if __name__ == "__main__":
 
     # Base configurations
     render_config = RenderConfig(
-        resolution=256,
+        resolution=512,
         samples=128,
+        device="GPU",
         background=Background.TRANSPARENT,
     )
 
     lighting_config = LightingConfig(
-        num_lights=2,
-        light_setup=LightSetup.OVERHEAD,
-        light_intensity=0.5,
-        light_type=LightType.SUN
+        num_lights=1,
+        light_setup=LightSetup.RANDOM_FIXED,
+        light_intensity=1,
+        light_type=LightType.POINT
     )
 
     camera_config = CameraConfig(
-        distance=1,
-        min_elevation=0,
-        max_elevation=45,
+        distance=24,
+        #min_elevation=0,
+        #max_elevation=45,
         roll=0.0,
-        camera_path_type=CameraPathType.SPIRAL_PHI,
+        camera_path_type=CameraPathType.CUBE,
         camera_density=16, # NB: outputs 8 images if .HALF coverage
         angular_step=30.0, # not needed for sprial phi
         sphere_coverage=SphereCoverage.HALF
     )
 
     blend_config = BlendFileConfig(
-        keep_lights=False,
+        keep_lights=True,
         keep_materials=True,
         keep_world_settings=False
     )

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="PyBlenderRender",
-    version="0.2.2",
+    version="0.3.0",
     author='spa-dev',
     description="A Python package for rendering 3D models using Blender.",
     long_description=open("README.md").read(),
@@ -14,10 +14,10 @@ setup(
     #},
     #include_package_data=True,
     install_requires=[
-        "bpy>=4.0",
+        "bpy>=4.1",
         "numpy",
         "tqdm",
         # List other dependencies here
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.7, <3.12", # for bpy v>4.0
 )
