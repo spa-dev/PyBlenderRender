@@ -14,8 +14,8 @@
 
 ### **Prerequisites**
 
-- Python 3.7 or later
-- Blender Python API 4.0 or later
+- Python 3.7 to 3.11
+- Blender Python API 4.1 or later
 
 ### **Install Dependencies**
 
