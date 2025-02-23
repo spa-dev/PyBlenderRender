@@ -13,7 +13,7 @@ def test_basic_render(renderer, test_model_path, output_dir):
     """Test that basic rendering works with default settings.
 
     Note: This test may be slow due to high default resolution.
-    Consider using low resolution and less fewer samples. 
+    Consider using low resolution and fewer samples. 
     """
     renderer.render(test_model_path, output_dir)
     stats = renderer.get_render_stats()
