@@ -326,27 +326,50 @@ class ModelRenderer:
         """Handle configuration differences between .blend file and renderer settings."""
         scene = bpy.context.scene
         
-        # Force render engine to CYCLES
-        if scene.render.engine != "CYCLES":
+        # Set render engine according to configuration
+        if scene.render.engine != self.render_config.engine.value:
             logger.info(
                 f"Render engine in .blend file set to: {scene.render.engine}. "
-                "Forcing render engine to CYCLES."
+                f"Changing to {self.render_config.engine.value} per configuration."
             )
-            scene.render.engine = "CYCLES"
+            scene.render.engine = self.render_config.engine.value
         
-        # Handle render settings
-        if self.render_config.device == "GPU":
-            scene.cycles.device = 'GPU'
-
+        # Apply resolution settings
         scene.render.resolution_x = self.render_config.resolution_x
         scene.render.resolution_y = self.render_config.resolution_y
-        scene.cycles.samples = self.render_config.samples
-        scene.cycles.use_adaptive_sampling = True
-        scene.cycles.use_denoising = self.render_config.use_denoising
+
+        # Apply transparency setting
         scene.render.film_transparent = (
             self.render_config.background == Background.TRANSPARENT
         )
-    
+
+        # Apply engine-specific settings
+        if self.render_config.engine == RenderEngine.CYCLES:
+            # Handle Cycles settings
+            scene.cycles.samples = self.render_config.samples
+            scene.cycles.use_adaptive_sampling = (
+                self.render_config.cycles_settings.use_adaptive_sampling
+            )
+            scene.cycles.use_denoising = (
+                self.render_config.cycles_settings.use_denoising
+            )
+            
+            # Set device (only for Cycles)
+            if self.render_config.device == "GPU":
+                scene.cycles.device = 'GPU'
+            else:
+                scene.cycles.device = 'CPU'
+
+        elif self.render_config.engine == RenderEngine.EEVEE:
+            # Handle EEVEE settings
+            scene.eevee.taa_render_samples = self.render_config.samples
+            scene.eevee.use_raytracing = (
+                self.render_config.eevee_settings.use_raytracing
+            )
+            scene.eevee.use_shadows = (
+                self.render_config.eevee_settings.use_shadows
+            )
+
         # Handle existing lights
         existing_lights = [obj for obj in scene.objects if obj.type == 'LIGHT']
         if not self.blend_config.keep_lights:
@@ -359,12 +382,10 @@ class ModelRenderer:
             for material in bpy.data.materials:
                 bpy.data.materials.remove(material, do_unlink=True)
                 
-        # Remove cameras (always remove existing cameras)
-        existing_camera = next(
-            (obj for obj in scene.objects if obj.type == "CAMERA"), None
-        )
-        if existing_camera:
-            bpy.data.objects.remove(existing_camera, do_unlink=True)
+        # Remove all cameras (always remove existing cameras)
+        cameras = [obj for obj in scene.objects if obj.type == "CAMERA"]
+        for camera in cameras:
+            bpy.data.objects.remove(camera, do_unlink=True)
         
         # Handle world settings
         if not self.blend_config.keep_world_settings:
