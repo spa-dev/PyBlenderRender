@@ -1,21 +1,17 @@
 # src/renderer/model_renderer.py
 
-import gc        
+import gc
 import math
 import os
-import sys
 import time
 from typing import List, Optional
 from contextlib import contextmanager, redirect_stdout
 
 import bpy
-import numpy as np
 from mathutils import Vector
 from tqdm import tqdm
 
-from renderer.config.render_config import (
-    RenderConfig, Background, RenderEngine
-)
+from renderer.config.render_config import RenderConfig, Background, RenderEngine
 from renderer.config.lighting_config import LightingConfig
 from renderer.config.camera_config import CameraConfig
 from renderer.config.blend_config import BlendFileConfig
@@ -24,30 +20,32 @@ from renderer.utils.logger import logger
 from renderer.camera import camera_registry
 from renderer.lighting import lighting_registry
 
+
 @contextmanager
 def stdout_redirected(to=os.devnull):
     """Suppress Blender's verbose console output.
-    
-    This function redirects stdout to suppress excessive console logs during 
-    rendering. It uses a context manager to ensure that output redirection 
-    is safely restored after execution. 
 
-    Note: This helps reducing noise from Blender's logs but should be used 
+    This function redirects stdout to suppress excessive console logs during
+    rendering. It uses a context manager to ensure that output redirection
+    is safely restored after execution.
+
+    Note: This helps reducing noise from Blender's logs but should be used
     cautiously in debugging scenarios where console output is required.
     """
 
-    with open(to, 'w') as file, redirect_stdout(file):
+    with open(to, "w") as file, redirect_stdout(file):
         yield
 
+
 class ModelRenderer:
-    """A class for rendering 3D models with configurable camera paths,  
+    """A class for rendering 3D models with configurable camera paths,
     lighting, and render settings.
-      
+
     Provides functionality to render 3D models using Blender's Cycles or EEVEE engine,
     supporting multiple camera path types, lighting configurations, and render settings.
     The renderer handles multiple file formats and can generate multiple views
     based on configurable camera paths and lighting setups.
-    
+
     Parameters
     ----------
     blend_config : BlendFileConfig, optional
@@ -56,7 +54,7 @@ class ModelRenderer:
         - keep_materials: Whether to preserve existing materials (default: True)
         - keep_world_settings: Whether to preserve world settings (default: False)
         If not provided, uses default BlendFileConfig settings.
-        
+
     render_config : RenderConfig, optional
         Configuration for rendering settings:
         - resolution: Output resolution in pixels (default: 1024)
@@ -73,7 +71,7 @@ class ModelRenderer:
             - use_raytracing: Whether to use raytracing (default: True)
             - use_shadows: Whether to enable shadow casting (default: False)
         If not provided, uses default RenderConfig settings.
-    
+
     lighting_config : LightingConfig, optional
         Configuration for scene lighting:
         - num_lights: Number of lights in scene (default: 1; maximum: 8)
@@ -83,7 +81,7 @@ class ModelRenderer:
         - light_setup: Light arrangement (default: LightSetup.RANDOM_FIXED)
         - light_intensity: Light strength (default: 0.5)
         If not provided, uses default LightingConfig settings.
-    
+
     camera_config : CameraConfig, optional
         Configuration for camera settings and path generation:
         - distance: Camera distance from center (default: 1.0)
@@ -95,14 +93,14 @@ class ModelRenderer:
         - angular_step: Base angular step for linear and phased spiral (default: 45.0)
         - sphere_coverage: Camera coverage (SphereCoverage.FULL or SphereCoverage.HALF)
         If not provided, uses default CameraConfig settings.
-    
+
     Methods
     -------
     render(model_path: str, output_dir: str) -> None
         Render the model from multiple angles based on the camera path configuration
         and save to the specified output directory. The output filenames include
         camera position information (azimuth, elevation, roll).
-        
+
     get_render_stats() -> dict
         Return statistics about the last render operation, including:
         - total_renders: Total number of renders attempted
@@ -110,7 +108,7 @@ class ModelRenderer:
         - failed_renders: Number of failed renders
         - render_time: Total time taken for rendering
         - output_directory: Directory where renders were saved
-    
+
     Examples
     --------
     >>> renderer = ModelRenderer(
@@ -119,7 +117,7 @@ class ModelRenderer:
     ...         samples=30,
     ...         engine=RenderEngine.EEVEE,
     ...         eevee_settings=EeveeSettings(use_raytracing=True)
-    ...     ),    
+    ...     ),
     ...     camera_config=CameraConfig(
     ...         camera_path_type=CameraPathType.SPIRAL_PHI,
     ...         camera_density=50
@@ -127,23 +125,23 @@ class ModelRenderer:
     ... )
     >>> renderer.render("model.glb", "output_renders")
     >>> stats = renderer.get_render_stats()
-    
+
     Notes
     -----
     - When importing .blend files, existing scene elements may be preserved
       or replaced based on the BlendFileConfig settings.
     - Camera paths and lighting setups are handled by generators.
-    - If SphereCoverage.HALF is specified, camera_density will be half 
+    - If SphereCoverage.HALF is specified, camera_density will be half
       that expected.
     - Blender console output messages are discarded.
     """
-    
+
     def __init__(
         self,
         blend_config: Optional[BlendFileConfig] = None,
         render_config: Optional[RenderConfig] = None,
         lighting_config: Optional[LightingConfig] = None,
-        camera_config: Optional[CameraConfig] = None
+        camera_config: Optional[CameraConfig] = None,
     ):
         """Initialize the ModelRenderer with configuration objects."""
         self.blend_config = blend_config or BlendFileConfig()
@@ -151,18 +149,18 @@ class ModelRenderer:
         self.lighting_config = lighting_config or LightingConfig()
         self.camera_config = camera_config or CameraConfig()
         self.render_stats = {}
-        
+
     def _clear_scene(self) -> None:
         """Clear the current scene while preserving critical settings."""
         # Select and remove all visible objects
-        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.select_all(action="SELECT")
         bpy.ops.object.delete()
         # Remove orphaned meshes, materials, etc.
         bpy.ops.outliner.orphans_purge()
-    
+
     def _setup_scene(self) -> None:
         """Configure the basic scene settings and render engine."""
-        
+
         self._clear_scene()
         scene = bpy.context.scene
 
@@ -187,64 +185,78 @@ class ModelRenderer:
                     # Access Cycles preferences
                     prefs = bpy.context.preferences
                     cycles_addon = prefs.addons.get("cycles")
-                    
+
                     if not cycles_addon:
                         raise RuntimeError("Cycles addon not found in preferences")
-                    
+
                     cprefs = cycles_addon.preferences
                     cprefs.refresh_devices()
-                    
+
                     # Check device availability
                     optix_devices = [d for d in cprefs.devices if d.type == "OPTIX"]
                     cuda_devices = [d for d in cprefs.devices if d.type == "CUDA"]
                     hip_devices = [d for d in cprefs.devices if d.type == "HIP"]
-                    
+
                     # Set compute device type and disable others
-                    # OPTIX (RTX GPU) is preferred over CUDA 
+                    # OPTIX (RTX GPU) is preferred over CUDA
                     if optix_devices:
                         logger.info("Configuring OptiX as primary compute device")
                         cprefs.compute_device_type = "OPTIX"
                         # Enable only OptiX devices
                         for device in cprefs.devices:
-                            device.use = (device.type == "OPTIX")
+                            device.use = device.type == "OPTIX"
                             if device.use:
-                                logger.info(f"Activating device: {device.name} ({device.type})")
+                                logger.info(
+                                    f"Activating device: {device.name} ({device.type})"
+                                )
                             else:
-                                logger.info(f"Deactivating device: {device.name} ({device.type})")
+                                logger.info(
+                                    f"Deactivating device: {device.name} ({device.type})"
+                                )
                     elif cuda_devices:
                         logger.info("Configuring CUDA as primary compute device")
                         cprefs.compute_device_type = "CUDA"
                         # Enable only CUDA devices
                         for device in cprefs.devices:
-                            device.use = (device.type == "CUDA")
+                            device.use = device.type == "CUDA"
                             if device.use:
-                                logger.info(f"Activating device: {device.name} ({device.type})")
+                                logger.info(
+                                    f"Activating device: {device.name} ({device.type})"
+                                )
                             else:
-                                logger.info(f"Deactivating device: {device.name} ({device.type})")
+                                logger.info(
+                                    f"Deactivating device: {device.name} ({device.type})"
+                                )
                     elif hip_devices:
                         logger.info("Configuring HIP as primary compute device")
                         cprefs.compute_device_type = "HIP"
                         # Enable only HIP devices
                         for device in cprefs.devices:
-                            device.use = (device.type == "HIP")
+                            device.use = device.type == "HIP"
                             if device.use:
-                                logger.info(f"Activating device: {device.name} ({device.type})")
+                                logger.info(
+                                    f"Activating device: {device.name} ({device.type})"
+                                )
                             else:
-                                logger.info(f"Deactivating device: {device.name} ({device.type})")
+                                logger.info(
+                                    f"Deactivating device: {device.name} ({device.type})"
+                                )
                     else:
                         raise RuntimeError("No compatible GPU compute devices found")
-                    
+
                     cprefs.refresh_devices()
-                    scene.cycles.device = 'GPU'
-                    
+                    scene.cycles.device = "GPU"
+
                 except Exception as e:
                     logger.warning(f"Failed to configure GPU rendering: {str(e)}")
                     logger.warning("Falling back to CPU rendering")
-                    scene.cycles.device = 'CPU'
-        
+                    scene.cycles.device = "CPU"
+
         elif self.render_config.engine == RenderEngine.EEVEE:
             scene.eevee.taa_render_samples = self.render_config.samples
-            scene.eevee.use_raytracing = self.render_config.eevee_settings.use_raytracing
+            scene.eevee.use_raytracing = (
+                self.render_config.eevee_settings.use_raytracing
+            )
             scene.eevee.use_shadows = self.render_config.eevee_settings.use_shadows
             # EEVEE uses OpenGL to render on GPU. No CPU option.
 
@@ -258,14 +270,15 @@ class ModelRenderer:
         scene.render.film_transparent = (
             self.render_config.background == Background.TRANSPARENT
         )
-      
+
         # Configure world settings
         world = scene.world or bpy.data.worlds.new("World")
         scene.world = world
         world.use_nodes = True
         bg = world.node_tree.nodes["Background"]
         bg.inputs[0].default_value = (
-            (1, 1, 1, 1) if self.render_config.background == Background.WHITE 
+            (1, 1, 1, 1)
+            if self.render_config.background == Background.WHITE
             else (0, 0, 0, 0)
         )
         bg.inputs[1].default_value = self.lighting_config.light_intensity
@@ -277,45 +290,45 @@ class ModelRenderer:
 
     def _import_model(self, filepath: str) -> None:
         """Import 3D model based on file extension."""
-      
+
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Model file not found: {filepath}")
 
         ext = os.path.splitext(filepath)[1].lower()
 
-        if ext == '.blend':
+        if ext == ".blend":
             # Open .blend file with minimal UI/script loading
             bpy.ops.wm.open_mainfile(
                 filepath=filepath,
                 load_ui=False,
                 use_scripts=False,
-                display_file_selector=False
-        )
+                display_file_selector=False,
+            )
             self._handle_blend_file_settings()
             return
-        
+
         importers = {
-            '.dae': lambda: bpy.ops.wm.collada_import(filepath=filepath),
-            '.glb': lambda: bpy.ops.import_scene.gltf(filepath=filepath),
-            '.gltf': lambda: bpy.ops.import_scene.gltf(filepath=filepath),
-            '.usdc': lambda: bpy.ops.wm.usd_import(filepath=filepath)
+            ".dae": lambda: bpy.ops.wm.collada_import(filepath=filepath),
+            ".glb": lambda: bpy.ops.import_scene.gltf(filepath=filepath),
+            ".gltf": lambda: bpy.ops.import_scene.gltf(filepath=filepath),
+            ".usdc": lambda: bpy.ops.wm.usd_import(filepath=filepath),
         }
-        
+
         importer = importers.get(ext)
         if not importer:
             raise ValueError(f"Unsupported file format: {ext}")
-            
+
         importer()
-        
+
         if not bpy.context.selected_objects:
             raise RuntimeError("No objects were imported from the model file")
 
         # Center and scale model
         for obj in bpy.context.selected_objects:
             obj.select_set(True)
-            bpy.context.view_layer.objects.active = obj    
-        
-        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+            bpy.context.view_layer.objects.active = obj
+
+        bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
         #  TODO: Options include type='ORIGIN_CENTER_OF_MASS', center='MEDIAN', or others
 
         #  Align model to X axis (buggy)
@@ -325,7 +338,7 @@ class ModelRenderer:
     def _handle_blend_file_settings(self) -> None:
         """Handle configuration differences between .blend file and renderer settings."""
         scene = bpy.context.scene
-        
+
         # Set render engine according to configuration
         if scene.render.engine != self.render_config.engine.value:
             logger.info(
@@ -333,7 +346,7 @@ class ModelRenderer:
                 f"Changing to {self.render_config.engine.value} per configuration."
             )
             scene.render.engine = self.render_config.engine.value
-        
+
         # Apply resolution settings
         scene.render.resolution_x = self.render_config.resolution_x
         scene.render.resolution_y = self.render_config.resolution_y
@@ -353,12 +366,12 @@ class ModelRenderer:
             scene.cycles.use_denoising = (
                 self.render_config.cycles_settings.use_denoising
             )
-            
+
             # Set device (only for Cycles)
             if self.render_config.device == "GPU":
-                scene.cycles.device = 'GPU'
+                scene.cycles.device = "GPU"
             else:
-                scene.cycles.device = 'CPU'
+                scene.cycles.device = "CPU"
 
         elif self.render_config.engine == RenderEngine.EEVEE:
             # Handle EEVEE settings
@@ -366,12 +379,10 @@ class ModelRenderer:
             scene.eevee.use_raytracing = (
                 self.render_config.eevee_settings.use_raytracing
             )
-            scene.eevee.use_shadows = (
-                self.render_config.eevee_settings.use_shadows
-            )
+            scene.eevee.use_shadows = self.render_config.eevee_settings.use_shadows
 
         # Handle existing lights
-        existing_lights = [obj for obj in scene.objects if obj.type == 'LIGHT']
+        existing_lights = [obj for obj in scene.objects if obj.type == "LIGHT"]
         if not self.blend_config.keep_lights:
             for light in existing_lights:
                 bpy.data.objects.remove(light, do_unlink=True)
@@ -381,12 +392,12 @@ class ModelRenderer:
         if not self.blend_config.keep_materials:
             for material in bpy.data.materials:
                 bpy.data.materials.remove(material, do_unlink=True)
-                
+
         # Remove all cameras (always remove existing cameras)
         cameras = [obj for obj in scene.objects if obj.type == "CAMERA"]
         for camera in cameras:
             bpy.data.objects.remove(camera, do_unlink=True)
-        
+
         # Handle world settings
         if not self.blend_config.keep_world_settings:
             world = scene.world
@@ -408,37 +419,38 @@ class ModelRenderer:
             bpy.ops.object.camera_add()
             camera = bpy.context.active_object
             camera.name = "Camera"
-    
+
         bpy.context.scene.camera = camera
 
         # Set up object tracking
         objects = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
         if not objects:
             raise RuntimeError("No mesh objects found in the scene to focus on")
-    
+
         target = objects[0]
-        
+
         # Warning: TRACK_TO causes problems with camera rotation at poles:
-        #track_constraint = (
-        #    camera.constraints.get("Track To") or 
+        # track_constraint = (
+        #    camera.constraints.get("Track To") or
         #    camera.constraints.new(type='TRACK_TO')
-        #)
-        #track_constraint.target = target
-        #track_constraint.track_axis = 'TRACK_NEGATIVE_Z'
-        #track_constraint.up_axis = 'UP_Y'
+        # )
+        # track_constraint.target = target
+        # track_constraint.track_axis = 'TRACK_NEGATIVE_Z'
+        # track_constraint.up_axis = 'UP_Y'
 
         # "DAMPED_TRACK" to avoid gimbal lock and instability near poles.
         # May have issues with maintaining a uniform distance from all angles.
-        track_constraint = (
-            camera.constraints.get("Damped Track") or 
-            camera.constraints.new(type='DAMPED_TRACK')
-        )
+        track_constraint = camera.constraints.get(
+            "Damped Track"
+        ) or camera.constraints.new(type="DAMPED_TRACK")
         track_constraint.target = target
-        track_constraint.track_axis = 'TRACK_NEGATIVE_Z'  # No up_axis needed?
+        track_constraint.track_axis = "TRACK_NEGATIVE_Z"  # No up_axis needed?
 
         return camera
 
-    def _position_camera(self, camera: bpy.types.Object, coord: SphericalCoordinate) -> None:
+    def _position_camera(
+        self, camera: bpy.types.Object, coord: SphericalCoordinate
+    ) -> None:
         """Position and orient camera based on spherical coordinates."""
         az_rad = math.radians(coord.azimuth)
         el_rad = math.radians(coord.elevation)
@@ -450,15 +462,15 @@ class ModelRenderer:
         z = coord.radius * math.sin(el_rad)
 
         camera.location = Vector((x, y, z))
-        
+
         direction = -camera.location.normalized()
-        rot_quat = direction.to_track_quat('-Z', 'Y')
-        euler = rot_quat.to_euler('XYZ')
-        
-        camera.rotation_mode = 'XYZ'
+        rot_quat = direction.to_track_quat("-Z", "Y")
+        euler = rot_quat.to_euler("XYZ")
+
+        camera.rotation_mode = "XYZ"
         camera.rotation_euler = euler
-        camera.rotation_euler.rotate_axis('Z', roll_rad)
-        
+        camera.rotation_euler.rotate_axis("Z", roll_rad)
+
     def _generate_camera_positions(self) -> List[SphericalCoordinate]:
         """Generate camera positions based on the selected path type."""
         path_type = self.camera_config.camera_path_type.value
@@ -467,7 +479,9 @@ class ModelRenderer:
 
     def _setup_lighting(self) -> List[bpy.types.Object]:
         """Create lighting setup based on configuration."""
-        setup_class = lighting_registry.get_setup(self.lighting_config.light_setup.value)
+        setup_class = lighting_registry.get_setup(
+            self.lighting_config.light_setup.value
+        )
         self.light_setup = setup_class(self.lighting_config)
         return self.light_setup.create_lights()
 
@@ -478,37 +492,33 @@ class ModelRenderer:
 
         try:
             start_time = time.time()
-            
+
             self._setup_scene()
             self._import_model(model_path)
-                          
-            camera = self._setup_camera()            
+
+            camera = self._setup_camera()
             lights = self._setup_lighting()
-            
-            camera_positions = self._generate_camera_positions()           
+
+            camera_positions = self._generate_camera_positions()
             total_renders = len(camera_positions)
             successful_renders = 0
-            
+
             logger.info(f"Starting render of {total_renders} images...")
 
             with tqdm(total=total_renders, desc="Rendering", unit="frame") as pbar:
                 for i, coord in enumerate(camera_positions):
                     self._position_camera(camera, coord)
-                    
+
                     # Delegate light position updates to the setup
                     self.light_setup.update_positions(coord.azimuth)
-                    # Each setup class handles this differently:
-                    # - RandomDynamicSetup: repositions lights based on camera angle
-                    # - RandomFixedSetup: does nothing (lights stay in initial positions)
-                    # - OverheadSetup: does nothing (lights stay overhead)
-                    
+
                     output_path = os.path.join(
-                        output_dir, 
+                        output_dir,
                         f"render_{i:03d}_az{coord.azimuth:03.0f}_el{coord.elevation:03.0f}"
-                        f"_roll{coord.roll:03.0f}.png"
+                        f"_roll{coord.roll:03.0f}.png",
                     )
                     bpy.context.scene.render.filepath = output_path
-       
+
                     logger.debug(
                         f"Frame {i}: Azimuth={coord.azimuth}, "
                         f"Elevation={coord.elevation}, Roll={coord.roll}"
@@ -522,19 +532,19 @@ class ModelRenderer:
                             logger.error(f"Failed to render position {i}: {str(e)}")
                     # Update progress bar
                     pbar.update(1)
-                    
+
             logger.info(f"Completed {total_renders} renders.")
-            
+
             end_time = time.time()
-            
+
             self.render_stats = {
-                'total_renders': total_renders,
-                'successful_renders': successful_renders,
-                'failed_renders': total_renders - successful_renders,
-                'render_time': end_time - start_time,
-                'output_directory': output_dir
+                "total_renders": total_renders,
+                "successful_renders": successful_renders,
+                "failed_renders": total_renders - successful_renders,
+                "render_time": end_time - start_time,
+                "output_directory": output_dir,
             }
-            
+
         except Exception as e:
             raise RuntimeError(f"Render operation failed: {str(e)}")
 
