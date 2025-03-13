@@ -74,19 +74,19 @@ class ModelRenderer:
 
     lighting_config : LightingConfig, optional
         Configuration for scene lighting:
-        - num_lights: Number of lights in scene (default: 1; maximum: 8)
+        - num_lights: Number of lights in scene (default: 3; maximum: 8)
         - light_type: Type of light (LightType.AREA, SUN, POINT, or SPOT)
         - light_height: Height of lights above center (default: 3.0)
         - light_radius: Radius for light positioning (default: 5.0)
-        - light_setup: Light arrangement (default: LightSetup.RANDOM_FIXED)
-        - light_intensity: Light strength (default: 0.5)
+        - light_setup: Light arrangement (default: LightSetup.THREE_POINT)
+        - light_intensity: Light strength (default: 1)
         If not provided, uses default LightingConfig settings.
 
     camera_config : CameraConfig, optional
         Configuration for camera settings and path generation:
-        - distance: Camera distance from center (default: 1.0)
-        - min_elevation: Minimum vertical angle (default: -90.0)
-        - max_elevation: Maximum vertical angle (default: 90.0)
+        - distance: Camera distance from center (default: 10.0)
+        - min_elevation: Minimum vertical angle (default: -90.0) TODO: implement this fully
+        - max_elevation: Maximum vertical angle (default: 90.0) TODO: implement this fully
         - roll: Camera roll angle (default: 0.0)
         - camera_path_type: Type of camera path (default: CameraPathType.CUBE)
         - camera_density: Number of cameras for orbit and phi spiral (default: 35)
@@ -329,11 +329,7 @@ class ModelRenderer:
             bpy.context.view_layer.objects.active = obj
 
         bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
-        #  TODO: Options include type='ORIGIN_CENTER_OF_MASS', center='MEDIAN', or others
-
-        #  Align model to X axis (buggy)
-        #  bpy.ops.object.transform_apply(rotation=True)
-        #  bpy.context.active_object.rotation_euler = (0, 0, 0)
+        # TODO: Add options incl. type='ORIGIN_CENTER_OF_MASS', center='MEDIAN', etc.
 
     def _handle_blend_file_settings(self) -> None:
         """Handle configuration differences between .blend file and renderer settings."""
@@ -427,9 +423,42 @@ class ModelRenderer:
         if not objects:
             raise RuntimeError("No mesh objects found in the scene to focus on")
 
-        target = objects[0]
+        ## Option 1: Manually select an object to track (e.g., the first object)
+        # target = objects[0]
 
-        # Warning: TRACK_TO causes problems with camera rotation at poles:
+        ## Option 2: Compute centroid of all mesh objects
+        # avg_pos = sum(
+        #     (obj.location for obj in objects), start=Vector((0, 0, 0))
+        # ) / len(objects)
+
+        ## Option 3: Compute average position based on bounding box centers.
+        # 1. Transform each object's 8 bounding box corners to world space.
+        # 2. Average the corners to get the object's bounding box center.
+        # 3. Sum all object centers and compute the final average position.
+        avg_pos = sum(
+            (
+                sum((obj.matrix_world @ Vector(corner) for corner in obj.bound_box), 
+                    Vector((0, 0, 0))) / 8 
+                for obj in objects
+            ), 
+            Vector((0, 0, 0))
+        ) / len(objects)
+
+        # Create an empty target object at the average position
+        target = bpy.data.objects.get("TrackingTarget")
+        if not target:
+            bpy.ops.object.empty_add(type="PLAIN_AXES", location=avg_pos)
+            ## Option 4: Track to the origin: 
+            #bpy.ops.object.empty_add(location=(0, 0, 0))
+            target = bpy.context.active_object
+            target.name = "TrackingTarget"
+        else:
+            target.location = avg_pos
+
+        # Set up tracking constraints (lock onto target):
+
+        ## Option to use old-style TRACK_TO constraint, which
+        ## seems to have problems with camera rotation at poles.
         # track_constraint = (
         #    camera.constraints.get("Track To") or
         #    camera.constraints.new(type='TRACK_TO')
@@ -438,13 +467,14 @@ class ModelRenderer:
         # track_constraint.track_axis = 'TRACK_NEGATIVE_Z'
         # track_constraint.up_axis = 'UP_Y'
 
-        # "DAMPED_TRACK" to avoid gimbal lock and instability near poles.
-        # May have issues with maintaining a uniform distance from all angles.
+        ## Use "DAMPED_TRACK" to avoid gimbal lock and instability near poles.
+        ## May have issues with maintaining a uniform distance from all angles?
+
         track_constraint = camera.constraints.get(
             "Damped Track"
         ) or camera.constraints.new(type="DAMPED_TRACK")
         track_constraint.target = target
-        track_constraint.track_axis = "TRACK_NEGATIVE_Z"  # No up_axis needed?
+        track_constraint.track_axis = "TRACK_NEGATIVE_Z"  # No up_axis needed
 
         return camera
 
@@ -497,7 +527,7 @@ class ModelRenderer:
             self._import_model(model_path)
 
             camera = self._setup_camera()
-            lights = self._setup_lighting()
+            self._setup_lighting()
 
             camera_positions = self._generate_camera_positions()
             total_renders = len(camera_positions)
