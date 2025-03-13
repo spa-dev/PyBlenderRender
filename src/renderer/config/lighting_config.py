@@ -15,6 +15,7 @@ class LightSetup(Enum):
     RANDOM_DYNAMIC = "random_dynamic"  # Lights follow camera
     RANDOM_FIXED = "random_fixed"  # Lights randomized then fixed
     OVERHEAD = "overhead"  # Fixed overhead lights
+    THREE_POINT = "three_point" # Standard 3-point studio lighting
 
 @dataclass
 class LightingConfig:
@@ -28,12 +29,12 @@ class LightingConfig:
         light_setup: Light arrangement pattern
         light_intensity: Light strength
     """
-    num_lights: int = 1
+    num_lights: int = 3
     light_type: LightType = LightType.AREA
     light_height: float = 3.0
     light_radius: float = 5.0
-    light_setup: LightSetup = LightSetup.RANDOM_FIXED
-    light_intensity: float = 0.5
+    light_setup: LightSetup = LightSetup.THREE_POINT
+    light_intensity: float = 1
     
     def __post_init__(self):
         """Validate configuration after initialization."""

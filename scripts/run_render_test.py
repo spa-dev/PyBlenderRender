@@ -1,5 +1,4 @@
 import argparse
-import time
 from datetime import datetime
 from pathlib import Path
 from renderer import *
@@ -50,7 +49,6 @@ def run_render_test(
     )
 
     try:
-        start_time = time.time()
         renderer.render(str(model_path), str(test_output_dir))
         stats = renderer.get_render_stats()
 
@@ -112,31 +110,31 @@ if __name__ == "__main__":
     # Base configurations
     render_config = RenderConfig(
         resolution=512,
-        samples=128,
+        samples=256,
         device="GPU",
         background=Background.TRANSPARENT,
     )
 
     lighting_config = LightingConfig(
-        num_lights=1,
-        light_setup=LightSetup.RANDOM_FIXED,
-        light_intensity=1,
-        light_type=LightType.POINT,
+        num_lights=2, # THREE_POINT changes this to 3.
+        light_setup=LightSetup.THREE_POINT,
+        light_intensity=110,
+        light_type=LightType.AREA, # THREE_POINT changes this to AREA.
     )
 
     camera_config = CameraConfig(
-        distance=24,
+        distance=30,
         # min_elevation=0,
         # max_elevation=45,
         roll=0.0,
         camera_path_type=CameraPathType.CUBE,
-        camera_density=16,  # NB: outputs 8 images if .HALF coverage
+        camera_density=16,  # Outputs 50% less if .HALF coverage
         angular_step=30.0,  # not needed for sprial phi
         sphere_coverage=SphereCoverage.HALF,
     )
 
     blend_config = BlendFileConfig(
-        keep_lights=True, keep_materials=True, keep_world_settings=False
+        keep_lights=False, keep_materials=True, keep_world_settings=False
     )
 
     # Run single test

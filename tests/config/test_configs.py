@@ -1,5 +1,7 @@
 # tests/config/test_configs.py
 import pytest
+
+from renderer.lighting.setups.three_point import ThreePointLightSetup
 from renderer.config import (
     RenderConfig,
     LightingConfig,
@@ -8,8 +10,9 @@ from renderer.config import (
     RenderEngine,
     CyclesSettings,
     EeveeSettings,
-    Background
+    Background,
 )
+
 
 def test_render_config_basic():
     """Test basic RenderConfig initialization and values"""
@@ -20,11 +23,13 @@ def test_render_config_basic():
     assert config.device == "GPU"  # Default
     assert config.background == Background.WHITE  # Default
 
+
 def test_render_config_tuple_resolution():
     """Test RenderConfig with tuple resolution"""
     config = RenderConfig(resolution=(800, 600), samples=64)
     assert config.resolution_x == 800
     assert config.resolution_y == 600
+
 
 def test_render_config_cycles():
     """Test RenderConfig with Cycles settings"""
@@ -32,14 +37,12 @@ def test_render_config_cycles():
         resolution=512,
         samples=64,
         engine=RenderEngine.CYCLES,
-        cycles_settings=CyclesSettings(
-            use_adaptive_sampling=True,
-            use_denoising=False
-        )
+        cycles_settings=CyclesSettings(use_adaptive_sampling=True, use_denoising=False),
     )
     assert config.engine == RenderEngine.CYCLES
     assert config.cycles_settings.use_adaptive_sampling is True
     assert config.cycles_settings.use_denoising is False
+
 
 def test_render_config_eevee():
     """Test RenderConfig with EEVEE settings"""
@@ -47,28 +50,27 @@ def test_render_config_eevee():
         resolution=512,
         samples=64,
         engine=RenderEngine.EEVEE,
-        eevee_settings=EeveeSettings(
-            use_raytracing=True,
-            use_shadows=True
-        )
+        eevee_settings=EeveeSettings(use_raytracing=True, use_shadows=True),
     )
     assert config.engine == RenderEngine.EEVEE
     assert config.eevee_settings.use_raytracing is True
     assert config.eevee_settings.use_shadows is True
 
+
 def test_render_config_validation():
     """Test RenderConfig validation"""
     with pytest.raises(ValueError):
         RenderConfig(resolution=-512)  # Invalid resolution
-    
+
     with pytest.raises(ValueError):
         RenderConfig(samples=-64)  # Invalid samples
-    
+
     with pytest.raises(ValueError):
         RenderConfig(device="InvalidDevice")  # Invalid device
-    
+
     with pytest.raises(ValueError):
         RenderConfig(resolution=(800,))  # Invalid resolution tuple
+
 
 def test_render_config_default_settings():
     """Test RenderConfig default engine settings"""
@@ -78,11 +80,13 @@ def test_render_config_default_settings():
     assert config.cycles_settings.use_adaptive_sampling is True
     assert config.eevee_settings.use_raytracing is True
 
+
 def test_camera_config():
     """Test CameraConfig initialization and values"""
     config = CameraConfig(distance=5.0, roll=90)
     assert config.distance == 5.0
     assert config.roll == 90
+
 
 def test_blend_file_config():
     """Test BlendFileConfig initialization and values"""
@@ -90,8 +94,28 @@ def test_blend_file_config():
     assert config.keep_lights is True
     assert config.keep_materials is False
 
+
 def test_lighting_config():
     """Test LightingConfig initialization and values"""
     config = LightingConfig(num_lights=2, light_intensity=0.8)
     assert config.num_lights == 2
     assert config.light_intensity == 0.8
+
+
+def test_lighting_config_custom_params():
+    """Test LightingConfig with custom light parameters"""
+    custom_light_params = [
+        {
+            "color": (1.0, 0.90, 0.90),
+            "cutoff_distance": 40.0,
+            "use_shadow": False,
+            "specular_factor": 0.8,
+            "diffuse_factor": 0.9
+        }
+    ]
+    
+    config = LightingConfig(num_lights=3, light_intensity=10.0)
+    light_setup = ThreePointLightSetup(config)
+    light_setup.set_custom_params(custom_light_params)
+    
+    assert light_setup.light_params == custom_light_params

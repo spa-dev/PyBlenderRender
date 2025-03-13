@@ -29,7 +29,8 @@ from renderer.lighting.registry import lighting_registry
 from renderer.lighting.setups import (
     OverheadLightSetup, 
     RandomDynamicLightSetup, 
-    RandomFixedLightSetup
+    RandomFixedLightSetup,
+    ThreePointLightSetup
 )
 
 __all__ = [
@@ -63,6 +64,7 @@ __all__ = [
     'lighting_registry',
     'OverheadLightSetup',
     'RandomDynamicLightSetup',
-    'RandomFixedLightSetup'
+    'RandomFixedLightSetup',
+    'ThreePointLightSetup'
 ]
 

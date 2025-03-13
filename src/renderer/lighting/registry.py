@@ -3,10 +3,12 @@ from typing import Dict, Type, List
 
 from renderer.utils.logger import logger
 from renderer.lighting.base import BaseLightSetup
-from renderer.lighting.setups.overhead import OverheadLightSetup
-from renderer.lighting.setups.random_dynamic import RandomDynamicLightSetup
-from renderer.lighting.setups.random_fixed import RandomFixedLightSetup
-
+from renderer.lighting.setups import (
+    OverheadLightSetup,
+    RandomDynamicLightSetup,
+    RandomFixedLightSetup,
+    ThreePointLightSetup,
+)
 
 class LightingRegistry:
     """
@@ -53,4 +55,5 @@ lighting_registry = LightingRegistry()
 lighting_registry.register(OverheadLightSetup)
 lighting_registry.register(RandomDynamicLightSetup)
 lighting_registry.register(RandomFixedLightSetup)
+lighting_registry.register(ThreePointLightSetup)
 # Register new setups here...

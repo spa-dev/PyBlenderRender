@@ -4,7 +4,7 @@
 ## **Features**
 
 - Modular configuration for camera, lighting, and rendering
-- Multiple camera path generation techniques (Spiral, Pole Rotation, Cube, etc.)
+- Multiple camera path generation techniques (spiral, pole rotation, cube views, etc.)
 - Blender Python API for high-quality 3D rendering
 - Extensible architecture for custom camera paths and lighting setups
 
@@ -111,16 +111,21 @@ PyBlenderRender/
 
 ### Limited Number of Keyword Arguments
 
-Keyword arguments are limited to core features of Blender. The code needs 
-further modification to accept and pass additional keyword arguments, i.e., 
-using **kwargs.
+Keyword arguments are generally limited to core features of Blender. 
+The code needs further modification to accept and pass additional keyword arguments. 
 
-### Camera Distance Variability in CameraPathType.CUBE
+### Camera Distance Variability (Notable in CameraPathType.CUBE)
 
-With the CUBE camera path type, the bottom view appears closer than others.  
-This issue is possibly related to object tracking issues, where the Track  
-To constraint might be influencing the final camera position in unexpected  
-ways, especially at extreme elevations.
+With the CUBE camera path type, the bottom view appears closer than others. This issue 
+is related to object tracking inconsistencies, where the camera may not focus on the intended center of the object. Possible causes:
+
+- Tracking constraint issues: The `Damped Track` constraint may affect final positioning in different ways, especially at extreme elevations.
+
+- Object center definition variation: An object’s center can be calculated in multiple ways (e.g. `GEOMETRY`, `CENTER_OF_MASS`, `MEDIAN`, `BOUNDS`). The command `bpy.ops.object.origin_set(...)` modifies the object’s origin, potentially shifting the tracking target.
+
+- Bounding box vs. true center: If the tracking target is set to the bounding box center, it may not match the intended center (i.e., geometric centroid or center of mass), or vice versa.
+
+Workaround: Try various options until suitable tracking is achieved.
 
 ### Light Energy Calculation Inconsistencies
 
@@ -157,8 +162,8 @@ advance for slow responses.
 
 The test model is used under the Creative Commons Attribution 4.0 License:
 
-- **Rubik's Cube** (https://skfb.ly/opCGZ) by BeyondDigital  
-  Licensed under Creative Commons Attribution (CC BY 4.0)  
+- **Rubik's Cube** (https://skfb.ly/opCGZ) by BeyondDigital
+  Licensed under Creative Commons Attribution (CC BY 4.0)
   [License Details](http://creativecommons.org/licenses/by/4.0/)
 
 ---

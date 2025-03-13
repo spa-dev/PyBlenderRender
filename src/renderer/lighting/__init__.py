@@ -1,12 +1,18 @@
 # src/renderer/lighting/__init__.py
 from renderer.lighting.registry import lighting_registry
 from renderer.lighting.base import BaseLightSetup
-from renderer.lighting.setups import OverheadLightSetup, RandomDynamicLightSetup, RandomFixedLightSetup
+from renderer.lighting.setups import (
+    OverheadLightSetup,
+    RandomDynamicLightSetup,
+    RandomFixedLightSetup,
+    ThreePointLightSetup,
+)
 
 __all__ = [
-    'lighting_registry',
-    'BaseLightSetup',
-    'OverheadLightSetup',
-    'RandomDynamicLightSetup',
-    'RandomFixedLightSetup'
+    "lighting_registry",
+    "BaseLightSetup",
+    "OverheadLightSetup",
+    "RandomDynamicLightSetup",
+    "RandomFixedLightSetup",
+    "ThreePointLightSetup",
 ]

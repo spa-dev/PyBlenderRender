@@ -46,7 +46,7 @@ class CameraConfig:
     - If SphereCoverage.HALF is specified, camera_density will be half
       that expected.    
     """
-    distance: float = 1.0
+    distance: float = 10.0
     min_elevation: float = -90.0
     max_elevation: float = 90.0
     roll: float = 0.0
